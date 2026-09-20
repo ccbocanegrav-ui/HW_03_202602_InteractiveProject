@@ -1,0 +1,2 @@
+pdfplumber>=0.11.0
+# se iran agregando en Fase 2+: sentence-transformers, chromadb, streamlit, openai, python-dotenv, pyyaml
