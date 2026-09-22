@@ -1,0 +1,40 @@
+REPORTE DE CALIDAD DE EXTRACCION — ds_001_2026_ef
+============================================================
+Paginas totales: 16
+Caracteres totales (antes de limpiar): 110529
+Caracteres totales (despues de limpiar): 109625
+Caracteres removidos por limpieza: 904
+Paginas con encabezado de El Peruano detectado y removido: 16
+Paginas descartadas (menos de 20 chars utiles): []
+
+------------------------------------------------------------
+EJEMPLO ANTES / DESPUES (pagina 1)
+
+ANTES:
+El Peruano / Jueves 8 de enero de 2026 NORMAS LEGALES 33
+procedimientos ni requisitos, ni cambios sustantivos
+ECONOMÍA Y FINANZAS que incrementen la carga administrativa, por lo que se
+configura el supuesto contenido en el literal a) del numeral
+Decreto Supremo que modifica el 50.2 del artículo 50 d
+
+DESPUES:
+procedimientos ni requisitos, ni cambios sustantivos
+ECONOMÍA Y FINANZAS que incrementen la carga administrativa, por lo que se
+configura el supuesto contenido en el literal a) del numeral
+Decreto Supremo que modifica el 50.2 del artículo 50 del Reglamento del Decreto Legislativo
+Nº 1565, aprobado m
+
+------------------------------------------------------------
+MUESTRA DE TEXTO LIMPIO — pagina 9 (pagina del medio)
+
+“Artículo 194. Prestaciones adicionales de obra la obra, no siendo necesario apercibimiento alguno al
+bajo el sistema de entrega solo construcción contratista de obra.”
+(…)
+194.3. No corresponde suscribir una adenda al contrato “Artículo 211. Valorización de la supervisión de la
+por la aprobación de la prestación adicional, bastando obra
+con su publicación en la Pladicop para que surta todos Las valorizaciones se realizan mensualmente y
+sus efectos. Se encuentra prohibida la aprobación de son consideradas pagos a cuenta. Las bases pueden
+prestaciones adicionales en vía de regularización. establecer periodos distintos de valorización, en cuyo
+(…)” caso contemplan el procedimiento correspondiente
+para su pago. En las valorizaciones, se incluyen las
+“Artículo 195. Prestaciones adicionales de 

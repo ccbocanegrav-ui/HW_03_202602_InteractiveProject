@@ -36,9 +36,14 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 DOCS = ["ley_32069", "ds_001_2026_ef"]
 
 # Header de El Peruano: contiene "El Peruano" y "NORMAS LEGALES" en la misma
-# linea, con o sin numero de pagina y fecha alrededor. Ejemplo real
-# encontrado: "El Peruano / Jueves 8 de enero de 2026 NORMAS LEGALES 41"
-HEADER_PATTERN = re.compile(r"El Peruano\s*/.*NORMAS LEGALES\s*\d*", re.IGNORECASE)
+# linea, en CUALQUIER orden (el diario imprime el encabezado espejado en
+# paginas pares vs impares):
+#   impares: "El Peruano / Jueves 8 de enero de 2026 NORMAS LEGALES 33"
+#   pares:   "34 NORMAS LEGALES Jueves 8 de enero de 2026/ El Peruano"
+# Se usa un lookahead doble para que el orden no importe.
+HEADER_PATTERN = re.compile(
+    r"(?=.*El Peruano)(?=.*NORMAS LEGALES)", re.IGNORECASE
+)
 
 MIN_CHARS_UTIL = 20
 
