@@ -1,29 +1,57 @@
 REPORTE DE CALIDAD DE EXTRACCION — ley_32069
 ============================================================
-Paginas totales: 63
-Caracteres totales (antes de limpiar): 214374
-Caracteres totales (despues de limpiar): 214374
-Caracteres removidos por limpieza: 0
-Paginas con encabezado de El Peruano detectado y removido: 0
+Paginas totales: 49
+Caracteres totales (antes de limpiar): 224950
+Caracteres totales (despues de limpiar): 221526
+Caracteres removidos por limpieza: 3424
+Paginas con encabezado de El Peruano detectado y removido: 49
 Paginas descartadas (menos de 20 chars utiles): []
 
 ------------------------------------------------------------
-No se detecto el patron de encabezado de El Peruano en ninguna pagina de este documento (el PDF no lo trae pegado al texto).
+EJEMPLO ANTES / DESPUES (pagina 4)
+
+ANTES:
+NORMAS LEGALES ACTUALIZADAS
+4
+Ley General de Contrataciones Públicas
+LEY GENERAL DE
+CONTRATACIONES PÚBLICAS
+LEY N° 32069
+(Publicada en separata especial en el Diario Oficial
+El Peruano el 24 de junio de 2024)
+LA PRESIDENTA DE LA REPÚBLICA
+POR CUANTO:
+EL CONGRESO DE LA REPÚBLICA;
+Ha dado la Ley sigui
+
+DESPUES:
+LEY GENERAL DE
+CONTRATACIONES PÚBLICAS
+LEY N° 32069
+(Publicada en separata especial en el Diario Oficial
+El Peruano el 24 de junio de 2024)
+LA PRESIDENTA DE LA REPÚBLICA
+POR CUANTO:
+EL CONGRESO DE LA REPÚBLICA;
+Ha dado la Ley siguiente:
+LEY GENERAL DE
+CONTRATACIONES PÚBLICAS
+TÍTULO I
+DISPOSICIONES G
 
 ------------------------------------------------------------
-MUESTRA DE TEXTO LIMPIO — pagina 32 (pagina del medio)
+MUESTRA DE TEXTO LIMPIO — pagina 28 (pagina del medio)
 
-Artículo 66. Adelantos
-66.1. La entidad contratante puede entregar adelantos al contratista con la finalidad de otorgarle
-financiamiento o liquidez para la ejecución del contrato en las condiciones establecidas y
-fundamentadas en la estrategia de contratación.
-66.2. El adelanto puede ser:
-a) Directo.
-b) Para materiales e insumos, equipamiento y mobiliario.
-c) Otros que sean establecidos en el reglamento.
-66.3. Los documentos del procedimiento de selección pueden establecer adelantos directos al
-contratista, los que en ningún caso exceden en conjunto del 30 % del monto del contrato original.
-66.4. El reglamento establece las condiciones y demás criterios para otorgar los adelantos y para
-su amortización, así como asegurar que se cumpla la finalidad de los adelantos.
-Artículo 67. Pagos
-67.1.
+inspectores en tanto se contrata la autoridad de la gestión administrativa
+supervisión. El reglamento establece puede autorizar la ejecución y el pago
+las condiciones necesarias para su de prestaciones adicionales hasta por el
+aplicación. 15% del monto total del contrato original,
+62.6. El supervisor o inspector son restándole los presupuestos deductivos
+responsables administrativa, civil o vinculados.
+penalmente por los hechos de su autoría 64.3. En el supuesto referido en el párrafo
+o acciones de inducción al error conforme anterior, se contemplan las siguientes
+a la normativa de la materia. excepciones, cuyas condiciones se
+establecen en el reglamento:
+Artículo 63. Modificaciones contractuales
+a) El titular de la entidad puede autorizar
+63.1. Los contratos celebrados dentro la ejecución

@@ -39,7 +39,8 @@ from pathlib import Path
 
 import pdfplumber
 
-HEADER_BAND_RATIO = 0.06   # % del alto de pagina reservado para el encabezado del diario
+HEADER_BAND_RATIO = 0.09   # % del alto de pagina reservado para el encabezado del diario
+                            # (0.06 cortaba a la mitad headers de 3 lineas en algunas paginas)
 CENTER_BAND_RATIO = 0.04   # % del ancho de pagina considerado "cerca del centro"
 MIN_CROSSING_RATIO = 0.03  # si menos de este % de palabras cruzan el centro -> es 2 columnas
 
@@ -83,6 +84,18 @@ DOCS = {
     "ds_001_2026_ef": "ds_001_2026_ef.pdf",
 }
 
+# HALLAZGO (ver DECISIONES.md): el PDF de ley_32069.pdf es un volumen
+# combinado de Editora Perú de 294 paginas que trae Ley + Reglamento en
+# un solo archivo. Se restringe la extraccion a las paginas que
+# corresponden UNICAMENTE al texto de la Ley (pag. 4 a 52; 1-3 son
+# portada/tabla de contenido, 53+ es el Reglamento, un documento
+# distinto que no es parte del corpus obligatorio de Task 1).
+# None = sin restriccion, se extraen todas las paginas del PDF.
+PAGE_RANGE = {
+    "ley_32069": (4, 52),
+    "ds_001_2026_ef": None,
+}
+
 TODAY = date.today().isoformat()
 
 
@@ -92,14 +105,20 @@ def extract_doc(doc_id: str, filename: str) -> int:
         print(f"[SKIP] {doc_id}: no encontrado en data/raw/")
         return 0
 
+    page_range = PAGE_RANGE.get(doc_id)
+
     out_path = PROCESSED_DIR / f"{doc_id}_raw.jsonl"
     n_written = 0
     with pdfplumber.open(path) as pdf, open(out_path, "w", encoding="utf-8") as out:
         for i, page in enumerate(pdf.pages):
+            page_num = i + 1
+            if page_range and not (page_range[0] <= page_num <= page_range[1]):
+                continue  # fuera del rango del documento (ver PAGE_RANGE arriba)
+
             text = extract_page_text_ordered(page)
             record = {
                 "doc": doc_id,
-                "page": i + 1,
+                "page": page_num,
                 "text": text,
                 "date_extracted": TODAY,
             }

@@ -45,6 +45,12 @@ HEADER_PATTERN = re.compile(
     r"(?=.*El Peruano)(?=.*NORMAS LEGALES)", re.IGNORECASE
 )
 
+# Header alternativo: volumen "NORMAS LEGALES ACTUALIZADAS" de Editora Peru
+# (ej. ley_32069.pdf de 294 paginas, Ley+Reglamento combinados). Es un
+# header de 3 LINEAS, no 1: "NORMAS LEGALES ACTUALIZADAS" / numero de
+# pagina / titulo del documento (repetido en cada pagina).
+HEADER_ACTUALIZADA_LINE1 = re.compile(r"^NORMAS LEGALES ACTUALIZADAS$", re.IGNORECASE)
+
 MIN_CHARS_UTIL = 20
 
 
@@ -54,8 +60,20 @@ def clean_page_text(text: str) -> tuple[str, bool]:
         return text, False
 
     lines = text.split("\n")
+
+    # Formato 1: El Peruano, header de 1 linea
     if lines and HEADER_PATTERN.search(lines[0]):
         cleaned = "\n".join(lines[1:]).lstrip("\n")
+        return cleaned, True
+
+    # Formato 2: "NORMAS LEGALES ACTUALIZADAS" (Editora Peru), header de
+    # 3 lineas: titulo de seccion / numero de pagina / titulo del documento
+    if (
+        len(lines) >= 3
+        and HEADER_ACTUALIZADA_LINE1.match(lines[0].strip())
+        and lines[1].strip().isdigit()
+    ):
+        cleaned = "\n".join(lines[3:]).lstrip("\n")
         return cleaned, True
 
     return text, False

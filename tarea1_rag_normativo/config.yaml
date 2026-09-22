@@ -1,0 +1,62 @@
+# config.yaml — Tarea 1 (RAG Normativo)
+# Todo parámetro que afecte el comportamiento del pipeline vive aquí,
+# nunca hardcodeado en el código (requisito explícito del enunciado).
+
+paths:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  logs_dir: "logs"
+  eval_dir: "eval"
+  index_dir: "data/index"          # persistencia de ChromaDB
+
+documents:
+  - id: ley_32069
+    filename: ley_32069.pdf
+    fuente: "https://www.gob.pe/institucion/osce/colecciones/45029-ley-n-32069-ley-general-de-contrataciones-publicas"
+  - id: ds_001_2026_ef
+    filename: ds_001_2026_ef.pdf
+    fuente: "https://busquedas.elperuano.pe/dispositivo/NL/2474920-3"
+
+chunking:
+  target_size_chars: 300
+  overlap_ratio: 0.2
+  min_chunk_ratio: 0.3             # fusiona el ultimo chunk de pagina si es menor a este % del tamaño objetivo
+
+embeddings:
+  local:
+    provider: "sentence-transformers"
+    model_name: "intfloat/multilingual-e5-base"
+    # e5 requiere prefijos distintos para query vs. passage (documentado
+    # en su model card): sin el prefijo correcto, la similitud se degrada.
+    query_prefix: "query: "
+    passage_prefix: "passage: "
+    max_input_tokens: 512
+  api:
+    provider: "openai"
+    model_name: "text-embedding-3-small"
+    max_input_tokens: 8191
+
+vector_store:
+  provider: "chromadb"
+  collection_name: "procurement_normativo"
+
+retrieval:
+  top_k: 5
+  similarity_threshold: 0.78        # PROVISIONAL — se calibra con evidencia en Fase 3 (sweep 0.5-0.95)
+                                     # ver nota del enunciado: 0.79 de similitud salio para una
+                                     # pregunta fuera de dominio ("como cocinar ceviche") con
+                                     # threshold intuitivo de 0.78 -> NO usar este valor sin calibrar
+
+generation:
+  provider: "openai"                # cambiar aqui, no en el codigo
+  model_name: "gpt-4o-mini"
+  max_output_tokens: 500
+  system_prompt: |
+    Eres un asistente que responde preguntas sobre contrataciones
+    publicas del Peru usando UNICAMENTE el contexto proporcionado.
+    Si la respuesta no esta en el contexto, indica explicitamente que
+    no puedes responder con la informacion disponible. Cita siempre
+    documento y pagina para cada afirmacion.
+
+costs:
+  log_file: "logs/cost_log.csv"
