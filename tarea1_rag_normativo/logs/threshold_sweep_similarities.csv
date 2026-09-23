@@ -1,0 +1,11 @@
+id,tipo,pregunta,best_similarity,top1_documento,top1_pagina
+q1,in_domain,¿Cual es el plazo maximo para pagar al contratista luego de otorgada la conformidad?,0.769,ds_001_2026_ef,6
+q2,in_domain,¿Cuanto puede exceder en conjunto el adelanto directo del monto del contrato original?,0.7238,ds_001_2026_ef,7
+q3,in_domain,¿Que pueden hacer el oficial de compra o el comite al elaborar las bases?,0.6889,ds_001_2026_ef,3
+q4,in_domain,¿Cuando se declara desierto un procedimiento de subasta inversa electronica por comparacion de precios?,0.8352,ley_32069,27
+q5,in_domain,¿En cuanto tiempo debe pagar la entidad contratante despues de la conformidad del area usuaria?,0.7332,ds_001_2026_ef,6
+q6,in_domain,¿Que porcentaje minimo debe representar el monto ofertado para el componente de diseño en obras de diseño y construccion?,0.7339,ds_001_2026_ef,7
+q7,out_of_domain,¿Como cocino un ceviche peruano?,0.5851,ley_32069,63
+q8,out_of_domain,¿Cuales son los requisitos para ser Presidente de la Republica del Peru?,0.682,ley_32069,14
+q9,out_of_domain,¿Cual es el procedimiento detallado para resolver un contrato por incumplimiento segun el Reglamento?,0.7301,ds_001_2026_ef,5
+q10,out_of_domain,¿Que dice el Reglamento sobre el plazo de garantia de los bienes adquiridos?,0.6943,ds_001_2026_ef,5

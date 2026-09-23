@@ -1,0 +1,7 @@
+timestamp,model,tokens_in,tokens_out,cost_usd,latency_ms,success
+2026-09-23T11:36:08.586430,gpt-4o-mini,0,0,0.0,0.0,False
+2026-09-23T13:06:00.595421,gpt-4o-mini,0,0,0.0,0.0,False
+2026-09-23T13:24:06.309387+00:00,gemini-2.0-flash,0,0,0.0,0.0,False
+2026-09-23T13:25:19.859276+00:00,gemini-2.0-flash,0,0,0.0,0.0,False
+2026-09-23T13:27:17.841986+00:00,gemini-3.6-flash,515,27,0.0,19643.4,True
+2026-09-23T13:28:55.488908+00:00,gemini-3.6-flash,633,70,0.0,5583.1,True

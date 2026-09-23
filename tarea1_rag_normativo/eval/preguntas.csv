@@ -1,0 +1,11 @@
+id,pregunta,tipo,documento_esperado,pagina_esperada,nota
+q1,¿Cual es el plazo maximo para pagar al contratista luego de otorgada la conformidad?,in_domain,ley_32069,29,Articulo 67 - plazo de 10 dias habiles
+q2,¿Cuanto puede exceder en conjunto el adelanto directo del monto del contrato original?,in_domain,ley_32069,29,Articulo 66 - tope del 30%
+q3,¿Que pueden hacer el oficial de compra o el comite al elaborar las bases?,in_domain,ds_001_2026_ef,3,Articulo 55 modificado por el DS 001-2026-EF
+q4,¿Cuando se declara desierto un procedimiento de subasta inversa electronica por comparacion de precios?,in_domain,ds_001_2026_ef,4,Articulo 96/98 modificado por el DS
+q5,¿En cuanto tiempo debe pagar la entidad contratante despues de la conformidad del area usuaria?,in_domain,ley_32069,29,Version coloquial de la pregunta q1 (mismo articulo 67)
+q6,¿Que porcentaje minimo debe representar el monto ofertado para el componente de diseño en obras de diseño y construccion?,in_domain,ds_001_2026_ef,,Articulo 166 modificado - buscar pagina exacta si se usa
+q7,¿Como cocino un ceviche peruano?,out_of_domain,,,Pregunta totalmente fuera de dominio (ejemplo del propio enunciado)
+q8,¿Cuales son los requisitos para ser Presidente de la Republica del Peru?,out_of_domain,,,Fuera de dominio pero tematicamente cercano (derecho publico)
+q9,¿Cual es el procedimiento detallado para resolver un contrato por incumplimiento segun el Reglamento?,out_of_domain,,,Dentro del tema pero el detalle completo esta en el Reglamento (no indexado) no en la Ley ni el DS
+q10,¿Que dice el Reglamento sobre el plazo de garantia de los bienes adquiridos?,out_of_domain,,,El Reglamento base (DS 009-2025-EF) no esta indexado; solo esta la Ley y el DS que lo MODIFICA parcialmente

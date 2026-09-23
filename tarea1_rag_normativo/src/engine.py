@@ -35,7 +35,7 @@ import csv
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import chromadb
@@ -44,17 +44,26 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from embeddings import get_embedding_backend  # noqa: E402
+from generation import get_generation_backend  # noqa: E402
 
-load_dotenv()  # carga OPENAI_API_KEY (y otras vars) desde .env, nunca hardcodeada
+load_dotenv()  # carga OPENAI_API_KEY / GEMINI_API_KEY desde .env, nunca hardcodeada
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.yaml"
 
 # Precios por 1M tokens, verificados el 2026-09-22 en la pagina oficial
-# de precios de OpenAI. IMPORTANTE: actualizar esta fecha y estos
-# valores si cambian los precios — nunca asumir que siguen vigentes.
+# de precios de cada proveedor. IMPORTANTE: actualizar esta fecha y
+# estos valores si cambian los precios — nunca asumir que siguen
+# vigentes.
 PRICING_USD_PER_1M_TOKENS = {
     "gpt-4o-mini": {"input": 0.15, "output": 0.60, "verified_on": "2026-09-22"},
+    # Gemini 1.5/2.0 Flash: gratis dentro de la cuota diaria del nivel
+    # free de Google AI Studio. Costo 0 mientras no se exceda esa cuota
+    # (documentar esto explicitamente en el video/README, no asumir
+    # que "gratis" significa "sin limite").
+    "gemini-1.5-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
+    "gemini-2.0-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
+    "gemini-3.6-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
 }
 
 _backend_cache = {}  # evita recargar el modelo de embeddings en cada llamada
@@ -90,7 +99,7 @@ def _log_cost(config: dict, model: str, tokens_in: int, tokens_out: int,
         if is_new:
             writer.writerow(["timestamp", "model", "tokens_in", "tokens_out",
                               "cost_usd", "latency_ms", "success"])
-        writer.writerow([datetime.utcnow().isoformat(), model, tokens_in,
+        writer.writerow([datetime.now(timezone.utc).isoformat(), model, tokens_in,
                           tokens_out, round(cost_usd, 6), round(latency_ms, 1), success])
 
 
@@ -180,32 +189,16 @@ def answer_question(question: str, config: dict = None, top_k: int = None) -> di
     model = gen_cfg["model_name"]
 
     try:
-        import os as _os
-        from openai import OpenAI
-
-        api_key = _os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            result["error"] = ("OPENAI_API_KEY no encontrada en el entorno. "
-                                "Definela en tu archivo .env.")
-            return result
-
-        client = OpenAI(api_key=api_key)
+        backend = get_generation_backend(config)
         t0 = time.time()
-        response = client.chat.completions.create(
-            model=model,
-            max_tokens=gen_cfg["max_output_tokens"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+        gen_result = backend.generate(system_prompt, user_prompt, gen_cfg["max_output_tokens"])
         latency_ms = (time.time() - t0) * 1000
 
-        tokens_in = response.usage.prompt_tokens
-        tokens_out = response.usage.completion_tokens
+        tokens_in = gen_result["tokens_in"]
+        tokens_out = gen_result["tokens_out"]
         cost = _compute_cost(model, tokens_in, tokens_out)
 
-        result["answer"] = response.choices[0].message.content
+        result["answer"] = gen_result["text"]
         result["tokens"] = {"input": tokens_in, "output": tokens_out}
         result["cost_usd"] = cost
 

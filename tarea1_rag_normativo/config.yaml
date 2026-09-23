@@ -42,21 +42,36 @@ vector_store:
 
 retrieval:
   top_k: 5
-  similarity_threshold: 0.78        # PROVISIONAL — se calibra con evidencia en Fase 3 (sweep 0.5-0.95)
-                                     # ver nota del enunciado: 0.79 de similitud salio para una
-                                     # pregunta fuera de dominio ("como cocinar ceviche") con
-                                     # threshold intuitivo de 0.78 -> NO usar este valor sin calibrar
+  similarity_threshold: 0.70        # CALIBRADO con evidencia (logs/threshold_sweep.csv, Fase 3):
+                                     # 8/10 decisiones correctas en el set preliminar (eval/preguntas.csv).
+                                     # Ningun threshold logra separacion perfecta: hay preguntas
+                                     # "cercanas al dominio pero no contestables" (ej. detalle que
+                                     # solo el Reglamento completo tiene) que quedan por encima de
+                                     # cualquier threshold razonable. Mitigacion: el prompt del
+                                     # generador (ver "generation" abajo) es la SEGUNDA linea de
+                                     # defensa -- aun si retrieval deja pasar un caso limite, el
+                                     # LLM esta instruido a decir que no puede responder si el
+                                     # contexto no lo sustenta, en vez de alucinar.
 
 generation:
-  provider: "openai"                # cambiar aqui, no en el codigo
-  model_name: "gpt-4o-mini"
-  max_output_tokens: 500
+  provider: "gemini"                 # cambiar aqui, no en el codigo. "gemini" (gratis) u "openai" (de pago)
+  model_name: "gemini-3.6-flash"     # gemini-2.0-flash fue retirado por Google; actualizar aqui si vuelve a cambiar
+  max_output_tokens: 1024            # gemini-3.6-flash consume tokens internos de "thinking" antes
+                                      # de la respuesta final; 500 no alcanzaba y cortaba la respuesta a la mitad
   system_prompt: |
     Eres un asistente que responde preguntas sobre contrataciones
     publicas del Peru usando UNICAMENTE el contexto proporcionado.
     Si la respuesta no esta en el contexto, indica explicitamente que
-    no puedes responder con la informacion disponible. Cita siempre
-    documento y pagina para cada afirmacion.
+    no puedes responder con la informacion disponible.
+
+    FORMATO OBLIGATORIO: al final de CADA afirmacion, cita la fuente
+    exacta entre parentesis asi: (Ley 32069, pag. 29) o
+    (DS 001-2026-EF, pag. 6). Nunca respondas sin esta cita. Si tu
+    respuesta usa informacion de mas de una fuente, cita cada
+    afirmacion con su fuente correspondiente por separado.
+
+    Se conciso: responde en 2-4 oraciones como maximo, salvo que la
+    pregunta pida explicitamente una lista o un detalle mas extenso.
 
 costs:
   log_file: "logs/cost_log.csv"
