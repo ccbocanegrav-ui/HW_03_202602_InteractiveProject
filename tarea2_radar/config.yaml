@@ -1,0 +1,41 @@
+# config.yaml — Tarea 2 (RAG Radar)
+
+paths:
+  processed_dir: "data/processed"
+  outputs_dir: "data/outputs"
+  logs_dir: "logs"
+  index_dir: "data/index"
+
+embeddings:
+  local:
+    provider: "sentence-transformers"
+    model_name: "intfloat/multilingual-e5-base"   # mismo modelo que Task 1 (reutilizable, ya cacheado)
+    query_prefix: "query: "
+    passage_prefix: "passage: "
+    max_input_tokens: 512
+
+vector_store:
+  provider: "chromadb"
+  collection_name: "radar_procesos"
+
+retrieval:
+  top_k: 10
+  # threshold PROVISIONAL: el enunciado pide mostrar si el threshold de
+  # Task 1 transfiere a este corpus, y recalibrar si no. Se recalibra
+  # con evidencia en cuanto haya datos reales + preguntas de evaluacion.
+  similarity_threshold: 0.70
+
+generation:
+  provider: "cohere"
+  model_name: "command-r-08-2024"
+  max_output_tokens: 1024
+  system_prompt: |
+    Eres un asistente que responde preguntas sobre procesos de
+    contratacion publica del Peru usando UNICAMENTE los procesos
+    proporcionados en el contexto (ya filtrados por departamento/monto/
+    fecha segun corresponda). Cita SIEMPRE el ocid de cada proceso que
+    menciones. Si no hay procesos que respondan la pregunta, dilo
+    explicitamente.
+
+costs:
+  log_file: "logs/cost_log.csv"
