@@ -1,0 +1,24 @@
+2026-09-24 00:11:32,851 | INFO | ================================================
+2026-09-24 00:11:32,851 | INFO | INICIO DE ADQUISICIÓN LOCAL
+2026-09-24 00:11:32,851 | INFO | Carpeta RAW: C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\data\raw
+2026-09-24 00:11:32,852 | ERROR | No se encontraron archivos .zip en C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\data\raw
+2026-09-24 00:12:14,774 | INFO | ================================================
+2026-09-24 00:12:14,774 | INFO | INICIO DE ADQUISICIÓN LOCAL
+2026-09-24 00:12:14,774 | INFO | Carpeta RAW: C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\raw
+2026-09-24 00:12:14,778 | INFO | ZIP encontrados: 3
+2026-09-24 00:12:14,780 | WARNING | ZIP INCOMPLETO | 2026-01_seace_v3_csv_es.zip | records=False | parties=False
+2026-09-24 00:12:14,781 | WARNING | ZIP INCOMPLETO | 2026-02_seace_v3_csv_es.zip | records=False | parties=False
+2026-09-24 00:12:14,782 | WARNING | ZIP INCOMPLETO | 2026-03_seace_v3_csv_es.zip | records=False | parties=False
+2026-09-24 00:12:14,783 | WARNING | MES FALTANTE | 2026-01
+2026-09-24 00:12:14,783 | WARNING | MES FALTANTE | 2026-02
+2026-09-24 00:12:14,783 | WARNING | MES FALTANTE | 2026-03
+2026-09-24 00:12:14,783 | INFO | RESUMEN | zip=3 | validos=0 | invalidos=3 | meses=0 | faltantes=01,02,03 | elapsed=0.009
+2026-09-24 00:15:11,083 | INFO | ========== INICIO ==========
+2026-09-24 00:15:11,083 | INFO | RAW_DIR=C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\data\raw
+2026-09-24 00:15:11,084 | ERROR | No se encontraron ZIP.
+2026-09-24 00:15:52,240 | INFO | ========== INICIO ==========
+2026-09-24 00:15:52,240 | INFO | RAW_DIR=C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\raw
+2026-09-24 00:15:52,244 | INFO | ZIP OK | 2026-01_seace_v3_csv_es.zip | mes=01 | size=1.81 MB
+2026-09-24 00:15:52,244 | INFO | ZIP OK | 2026-02_seace_v3_csv_es.zip | mes=02 | size=8.36 MB
+2026-09-24 00:15:52,245 | INFO | ZIP OK | 2026-03_seace_v3_csv_es.zip | mes=03 | size=14.86 MB
+2026-09-24 00:15:52,247 | INFO | RESUMEN | encontrados=3 | validos=3 | invalidos=0 | meses=3 | faltantes= | elapsed=0.006

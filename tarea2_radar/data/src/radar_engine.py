@@ -1,176 +1,370 @@
 """
-radar_engine.py — Task 2, Phase 3: motor RAG hibrido
+Tarea 2 - Fase 3: Radar de procesos.
 
-ARQUITECTURA: igual que Task 1 — una funcion, answer_question(), que
-el dashboard de Streamlit (Fase 4) llama. Nunca reconstruye el indice.
+Recibe resultados de búsqueda híbrida y calcula:
 
-DECISION HIBRIDA: preguntas como "obras de agua en Cusco mayores a 1M"
-combinan 2 tipos de condicion. "Cusco" y "> 1M" son FILTROS
-ESTRUCTURADOS (se aplican como where-clause de ChromaDB sobre la
-metadata), no texto para el embedding — un embedding no entiende
-numeros ("mayor a 1 millon" no tiene una representacion vectorial
-confiable de la comparacion numerica). Solo la parte descriptiva
-("obras de agua") pasa por busqueda semantica.
+- señales de alerta
+- severidad de cada señal
+- Radar Score
 
-Uso:
-    from radar_engine import answer_question, load_config
-    config = load_config()
-    result = answer_question(
-        "obras de agua potable",
-        config,
-        filters={"department": "CUSCO", "min_amount": 1_000_000},
-    )
+El motor NO realiza búsqueda.
+El motor NO genera embeddings.
+El motor NO reconstruye índices.
+
+Entrada:
+    resultado de search.py
+
+Salida:
+    resultados enriquecidos con:
+        - radar_score
+        - signals
 """
 
-import csv
-import sys
-import time
-from datetime import datetime, timezone
-from pathlib import Path
-
-import chromadb
-import yaml
-from dotenv import load_dotenv
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from embeddings import get_embedding_backend  # noqa: E402
-from generation import get_generation_backend  # noqa: E402
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = BASE_DIR / "config.yaml"
-
-_ENV_PATH = BASE_DIR.parent / ".env"
-load_dotenv(dotenv_path=_ENV_PATH)
-if not _ENV_PATH.exists():
-    load_dotenv(dotenv_path=BASE_DIR / ".env")
-
-PRICING_USD_PER_1M_TOKENS = {
-    "command-r-08-2024": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-24"},
-}
-
-_backend_cache = {}
+from typing import Any, Dict, List
 
 
-def load_config() -> dict:
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+# ============================================================
+# CONFIGURACIÓN
+# ============================================================
+
+# Puntajes por tipo de señal.
+SCORE_HIGH_AMOUNT = 15
+SCORE_FEW_BIDDERS = 15
+
+# Umbral para considerar una similitud alta.
+HIGH_SIMILARITY_THRESHOLD = 0.85
+
+# Número de postores considerado bajo.
+FEW_BIDDERS_THRESHOLD = 2
 
 
-def _get_backend(config: dict):
-    if "local" not in _backend_cache:
-        _backend_cache["local"] = get_embedding_backend(config, which="local")
-    return _backend_cache["local"]
+# ============================================================
+# UTILIDADES
+# ============================================================
 
+def safe_float(value):
+    """
+    Convierte un valor a float de forma segura.
+    """
 
-def _get_collection(config: dict):
-    index_dir = BASE_DIR / config["paths"]["index_dir"]
-    client = chromadb.PersistentClient(path=str(index_dir))
-    return client.get_collection(config["vector_store"]["collection_name"])
-
-
-def _build_where(filters: dict) -> dict | None:
-    """Traduce los filtros del dashboard a un where-clause de ChromaDB."""
-    if not filters:
+    if value is None:
         return None
-    clauses = []
-    if filters.get("department"):
-        clauses.append({"department": filters["department"]})
-    if filters.get("category"):
-        clauses.append({"category": filters["category"]})
-    if filters.get("min_amount") is not None:
-        clauses.append({"amount": {"$gte": float(filters["min_amount"])}})
-    if filters.get("max_amount") is not None:
-        clauses.append({"amount": {"$lte": float(filters["max_amount"])}})
-    if not clauses:
-        return None
-    if len(clauses) == 1:
-        return clauses[0]
-    return {"$and": clauses}
-
-
-def retrieve(question: str, config: dict, filters: dict = None, top_k: int = None) -> list[dict]:
-    backend = _get_backend(config)
-    collection = _get_collection(config)
-    top_k = top_k or config["retrieval"]["top_k"]
-    where = _build_where(filters or {})
-
-    qvec = list(map(float, backend.encode_queries([question])[0]))
-    kwargs = {"query_embeddings": [qvec], "n_results": top_k}
-    if where:
-        kwargs["where"] = where
-    results = collection.query(**kwargs)
-
-    sources = []
-    if results["ids"] and results["ids"][0]:
-        for doc_text, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0]):
-            sources.append({
-                "ocid": meta["ocid"], "department": meta["department"], "amount": meta["amount"],
-                "buyer": meta["buyer"], "category": meta["category"], "similarity": round(1 - dist, 4),
-                "text": doc_text,
-            })
-    return sources
-
-
-def _compute_cost(model, tokens_in, tokens_out):
-    p = PRICING_USD_PER_1M_TOKENS.get(model)
-    if not p:
-        return 0.0
-    return (tokens_in / 1_000_000) * p["input"] + (tokens_out / 1_000_000) * p["output"]
-
-
-def _log_cost(config, model, tokens_in, tokens_out, cost, latency_ms, success):
-    log_path = BASE_DIR / config["costs"]["log_file"]
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    is_new = not log_path.exists()
-    with open(log_path, "a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        if is_new:
-            w.writerow(["timestamp", "model", "tokens_in", "tokens_out", "cost_usd", "latency_ms", "success"])
-        w.writerow([datetime.now(timezone.utc).isoformat(), model, tokens_in, tokens_out,
-                    round(cost, 6), round(latency_ms, 1), success])
-
-
-def answer_question(question: str, config: dict = None, filters: dict = None, top_k: int = None) -> dict:
-    config = config or load_config()
-    result = {"answer": None, "sources": [], "abstained": False,
-              "tokens": {"input": 0, "output": 0}, "cost_usd": 0.0, "error": None}
 
     try:
-        sources = retrieve(question, config, filters=filters, top_k=top_k)
-    except Exception as e:
-        result["error"] = f"Error en retrieval: {e}"
-        return result
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
-    result["sources"] = sources
-    threshold = config["retrieval"]["similarity_threshold"]
-    best_sim = sources[0]["similarity"] if sources else 0.0
 
-    if not sources or best_sim < threshold:
-        result["abstained"] = True
-        result["answer"] = ("No encuentro procesos que respondan esta pregunta con los filtros aplicados. "
-                             "Prueba ampliando el rango de fechas/monto o quitando algún filtro.")
-        return result
+def percentile_90(values):
+    """
+    Calcula aproximadamente el percentil 90.
 
-    context = "\n\n".join(
-        f"[ocid: {s['ocid']} | {s['department']} | S/ {s['amount']:,.0f} | {s['buyer']}]\n{s['text']}"
-        for s in sources
+    Se utiliza únicamente para detectar montos
+    relativamente altos dentro del conjunto analizado.
+
+    No requiere numpy.
+    """
+
+    if not values:
+        return None
+
+    values = sorted(values)
+
+    if len(values) == 1:
+        return values[0]
+
+    position = 0.90 * (len(values) - 1)
+
+    lower = int(position)
+    upper = min(lower + 1, len(values) - 1)
+
+    fraction = position - lower
+
+    return (
+        values[lower]
+        + (values[upper] - values[lower]) * fraction
     )
-    gen_cfg = config["generation"]
-    model = gen_cfg["model_name"]
-    user_prompt = f"Procesos:\n{context}\n\nPregunta: {question}"
 
-    try:
-        backend = get_generation_backend(config)
-        t0 = time.time()
-        gen_result = backend.generate(gen_cfg["system_prompt"], user_prompt, gen_cfg["max_output_tokens"])
-        latency_ms = (time.time() - t0) * 1000
 
-        result["answer"] = gen_result["text"]
-        result["tokens"] = {"input": gen_result["tokens_in"], "output": gen_result["tokens_out"]}
-        result["cost_usd"] = _compute_cost(model, gen_result["tokens_in"], gen_result["tokens_out"])
-        _log_cost(config, model, gen_result["tokens_in"], gen_result["tokens_out"], result["cost_usd"], latency_ms, True)
-    except Exception as e:
-        result["error"] = f"Error al generar respuesta: {e}"
-        _log_cost(config, model, 0, 0, 0.0, 0.0, False)
+# ============================================================
+# UMBRAL DE MONTO
+# ============================================================
 
-    return result
+def calculate_high_amount_threshold(results):
+    """
+    Calcula el umbral de monto alto del conjunto.
+
+    Se utiliza el percentil 90 de los montos disponibles.
+    """
+
+    amounts = []
+
+    for result in results:
+
+        amount = safe_float(
+            result.get("monto_pen")
+        )
+
+        if amount is not None:
+            amounts.append(amount)
+
+    return percentile_90(amounts)
+
+
+# ============================================================
+# SEÑALES
+# ============================================================
+
+def check_high_amount(result, threshold):
+    """
+    Detecta si el proceso tiene un monto relativamente alto
+    respecto al conjunto analizado.
+    """
+
+    if threshold is None:
+        return None
+
+    amount = safe_float(
+        result.get("monto_pen")
+    )
+
+    if amount is None:
+        return None
+
+    if amount >= threshold:
+
+        return {
+            "type": "high_amount",
+            "severity": "medio",
+            "score": SCORE_HIGH_AMOUNT,
+            "message": (
+                "El monto está dentro del 10% superior "
+                "del conjunto de procesos."
+            ),
+        }
+
+    return None
+
+
+def check_few_bidders(result):
+    """
+    Detecta procesos con pocos postores.
+
+    Regla:
+        <= 2 postores
+    """
+
+    bidders = safe_float(
+        result.get("num_postores")
+    )
+
+    if bidders is None:
+        return None
+
+    if bidders <= FEW_BIDDERS_THRESHOLD:
+
+        return {
+            "type": "few_bidders",
+            "severity": "medio",
+            "score": SCORE_FEW_BIDDERS,
+            "message": (
+                f"El proceso registra {int(bidders)} "
+                "postores en los datos disponibles."
+            ),
+        }
+
+    return None
+
+
+def check_high_similarity(result):
+    """
+    La similitud NO suma puntos al Radar.
+
+    Solo genera una señal informativa para indicar
+    que el resultado es semánticamente relevante.
+    """
+
+    similarity = safe_float(
+        result.get("similarity")
+    )
+
+    if similarity is None:
+        return None
+
+    if similarity >= HIGH_SIMILARITY_THRESHOLD:
+
+        return {
+            "type": "high_similarity",
+            "severity": "informativo",
+            "score": 0,
+            "message": (
+                "El proceso presenta alta similitud "
+                "con la consulta realizada."
+            ),
+        }
+
+    return None
+
+
+# ============================================================
+# ANALIZAR PROCESO
+# ============================================================
+
+def analyze_process(result, amount_threshold=None):
+    """
+    Analiza un proceso individual.
+
+    Devuelve el proceso original enriquecido.
+    """
+
+    signals: List[Dict[str, Any]] = []
+
+    score = 0
+
+    # --------------------------------------------------------
+    # MONTO
+    # --------------------------------------------------------
+
+    signal = check_high_amount(
+        result,
+        amount_threshold,
+    )
+
+    if signal is not None:
+        signals.append(signal)
+        score += signal["score"]
+
+    # --------------------------------------------------------
+    # POSTORES
+    # --------------------------------------------------------
+
+    signal = check_few_bidders(
+        result
+    )
+
+    if signal is not None:
+        signals.append(signal)
+        score += signal["score"]
+
+    # --------------------------------------------------------
+    # SIMILITUD
+    # --------------------------------------------------------
+
+    signal = check_high_similarity(
+        result
+    )
+
+    if signal is not None:
+        signals.append(signal)
+
+    # --------------------------------------------------------
+    # RESULTADO
+    # --------------------------------------------------------
+
+    enriched = dict(result)
+
+    enriched["radar_score"] = score
+
+    enriched["signals"] = signals
+
+    return enriched
+
+
+# ============================================================
+# ORDENAMIENTO
+# ============================================================
+
+def radar_sort_key(result):
+    """
+    Orden:
+
+    1. Radar Score descendente
+    2. similitud descendente
+    """
+
+    score = safe_float(
+        result.get("radar_score")
+    ) or 0
+
+    similarity = safe_float(
+        result.get("similarity")
+    ) or 0
+
+    return (
+        score,
+        similarity,
+    )
+
+
+# ============================================================
+# RADAR COMPLETO
+# ============================================================
+
+def run_radar(results):
+    """
+    Ejecuta el Radar sobre los resultados de búsqueda.
+
+    Parámetros:
+        results:
+            lista proveniente de search.py
+
+    Retorna:
+        {
+            "amount_threshold": ...,
+            "results": [...]
+        }
+    """
+
+    if not results:
+        return {
+            "amount_threshold": None,
+            "results": [],
+        }
+
+    # --------------------------------------------------------
+    # Umbral de monto
+    # --------------------------------------------------------
+
+    amount_threshold = calculate_high_amount_threshold(
+        results
+    )
+
+    # --------------------------------------------------------
+    # Analizar procesos
+    # --------------------------------------------------------
+
+    analyzed = []
+
+    for result in results:
+
+        analyzed.append(
+            analyze_process(
+                result,
+                amount_threshold,
+            )
+        )
+
+    # --------------------------------------------------------
+    # Ordenar
+    # --------------------------------------------------------
+
+    analyzed.sort(
+        key=radar_sort_key,
+        reverse=True,
+    )
+
+    # --------------------------------------------------------
+    # Reasignar ranking
+    # --------------------------------------------------------
+
+    for index, result in enumerate(
+        analyzed,
+        start=1,
+    ):
+        result["rank"] = index
+
+    return {
+        "amount_threshold": amount_threshold,
+        "results": analyzed,
+    }

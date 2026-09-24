@@ -175,3 +175,30 @@ Todo el proyecto corre con proveedores **gratuitos** (Cohere trial +
 modelo de embeddings local). Log de costos real en
 `tarea1_rag_normativo/logs/cost_log.csv` y
 `tarea2_radar/logs/cost_log.csv` — costo acumulado: **$0.00**.
+
+
+
+# HW-03 Interactive Project
+
+## Tarea 1 - RAG normativo
+
+Sistema de recuperación y generación basado en embeddings
+y documentación normativa.
+
+## Tarea 2 - Radar de procesos
+
+Extensión del proyecto para búsqueda de procesos de contratación
+pública y detección de señales mediante reglas explicables.
+
+## Relación entre ambas tareas
+
+La Tarea 2 reutiliza componentes desarrollados en la Tarea 1,
+particularmente el backend de embeddings y su configuración.
+
+## Flujo general
+
+Usuario
+→ búsqueda híbrida
+→ recuperación de procesos
+→ señales del radar
+→ resultados explicables

@@ -1,5 +1,5 @@
 # DECISIONES.md
-
+# TAREA 1
 Registro de decisiones tomadas durante el proyecto y su justificación.
 Se completa a medida que avanzan las fases (no todo de una vez).
 
@@ -208,3 +208,59 @@ alternativas gratuitas en orden:
 - Interfaz Streamlit: `app.py` ya escrito y probado (arranca sin
   errores, panel de calidad con reportes de Fase 1/4). Falta correrlo
   con el indice y las API keys reales de la usuaria.
+
+
+## Decisiones de diseño - Tarea 2
+
+## 1. Reutilización de embeddings
+
+Se decidió reutilizar el backend de embeddings desarrollado
+en la Tarea 1 para mantener consistencia entre ambas tareas.
+
+El modelo utilizado es:
+
+intfloat/multilingual-e5-base
+
+Dimensión:
+
+768
+
+## 2. Búsqueda híbrida
+
+La búsqueda combina filtros estructurados con similitud semántica.
+
+Los filtros se aplican mediante ChromaDB y posteriormente
+los resultados se recuperan utilizando embeddings.
+
+## 3. Separación de filtros y consulta semántica
+
+Las restricciones como departamento, mes y monto no se
+envían directamente al embedding.
+
+Por ejemplo:
+
+"servicios de limpieza en Lima por más de 1 millón de soles"
+
+se transforma en:
+
+Consulta semántica:
+"servicios de limpieza"
+
+Filtros:
+departamento = LIMA
+categoría = services
+monto_min = 1000000
+
+## 4. Reglas del radar
+
+El radar utiliza señales explicables basadas en variables
+estructuradas del proceso.
+
+Las señales no representan una acusación ni una conclusión
+sobre irregularidades. Indican únicamente condiciones que
+merecen revisión.
+
+## 5. Transparencia
+
+Cada señal muestra su severidad y el motivo por el cual
+fue activada.

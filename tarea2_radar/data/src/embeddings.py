@@ -54,7 +54,9 @@ class LocalE5Backend(EmbeddingBackend):
         self.query_prefix = query_prefix
         self.passage_prefix = passage_prefix
         self._model = SentenceTransformer(model_name)
-        self.dimension = self._model.get_sentence_embedding_dimension()
+        self.dimension = self._model.get_embedding_dimension()
+
+
 
     def encode_passages(self, texts: list[str]):
         prefixed = [self.passage_prefix + t for t in texts]

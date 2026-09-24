@@ -1,200 +1,787 @@
 """
-validate.py — Task 2, Phase 2: Validation and Territorial Normalization
+Tarea 2 - Fase 2
 
-IMPORTANTE: ajusta COLUMN_MAP a los nombres REALES de columnas de tu
-CSV de OECE (correlos con: python src/load_data.py, que imprime las
-columnas detectadas). Toda la logica de aqui en adelante usa los
-nombres CANONICOS (columna derecha), asi que solo hay que tocar este
-diccionario si el archivo real usa nombres distintos.
+Validación y normalización territorial.
+
+Reglas:
+
+1. OCID duplicados.
+2. Monto faltante.
+3. Monto cero.
+4. Descripción faltante.
+5. Departamento faltante.
+6. Provincias/departamentos mezclados.
+7. Inconsistencias de texto.
+8. Normalización a los 25 departamentos del Perú.
+
+Nada se elimina silenciosamente.
 """
 
-import json
-import re
-import sys
-import unicodedata
 from pathlib import Path
+import re
+import unicodedata
 
 import pandas as pd
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-PROCESSED_DIR = BASE_DIR / "data" / "processed"
-LOGS_DIR = BASE_DIR / "logs"
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+from records import load_all_months
 
-# Nombres reales confirmados en el archivo "Registros" del export de OECE.
-COLUMN_MAP = {
-    "ocid": "Open Contracting ID",
-    "description": "Entrega compilada:Licitación:Descripción de la licitación",
-    "amount": "compiledRelease/tender/value/amount_PEN",
-    "buyer": "Entrega compilada:Comprador:Nombre de la Organización",
-    "buyer_id": "Entrega compilada:Comprador:ID de Organización",
-    "category": "Entrega compilada:Licitación:Categoría principal de contratación",
-    "date": "compiledRelease/tender/datePublished",
-}
 
-# El departamento NO esta en "Registros" — viene de "Ent_PartesInvolucradas"
-# (archivo distinto, 1 fila = 1 organizacion). Se cruza por ID de
-# entidad = buyer_id de Registros.
-PARTES_COLUMN_MAP = {
-    "entity_id": "Entrega compilada:Partes involucradas:ID de Entidad",
-    "department_raw": "Entrega compilada:Partes involucradas:Dirección:Departamento",
-}
+# ============================================================
+# RUTAS
+# ============================================================
 
-# Los 25 departamentos oficiales del Peru (incluye Callao).
-DEPARTAMENTOS_PERU = {
-    "AMAZONAS", "ANCASH", "APURIMAC", "AREQUIPA", "AYACUCHO", "CAJAMARCA",
-    "CALLAO", "CUSCO", "HUANCAVELICA", "HUANUCO", "ICA", "JUNIN",
-    "LA LIBERTAD", "LAMBAYEQUE", "LIMA", "LORETO", "MADRE DE DIOS",
-    "MOQUEGUA", "PASCO", "PIURA", "PUNO", "SAN MARTIN", "TACNA", "TUMBES",
+BASE_DIR = (
+    Path(__file__).resolve().parent.parent
+)
+
+PROCESSED_DIR = (
+    BASE_DIR / "data" / "processed"
+)
+
+PROCESSED_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+
+# ============================================================
+# DEPARTAMENTOS DEL PERÚ
+# ============================================================
+
+DEPARTMENTS = {
+    "AMAZONAS",
+    "ANCASH",
+    "APURIMAC",
+    "AREQUIPA",
+    "AYACUCHO",
+    "CAJAMARCA",
+    "CALLAO",
+    "CUSCO",
+    "HUANCAVELICA",
+    "HUANUCO",
+    "ICA",
+    "JUNIN",
+    "LA LIBERTAD",
+    "LAMBAYEQUE",
+    "LIMA",
+    "LORETO",
+    "MADRE DE DIOS",
+    "MOQUEGUA",
+    "PASCO",
+    "PIURA",
+    "PUNO",
+    "SAN MARTIN",
+    "TACNA",
+    "TUMBES",
     "UCAYALI",
 }
 
-# Alias/variantes comunes -> nombre oficial (se amplia segun lo que
-# aparezca realmente en los datos).
-DEPARTAMENTO_ALIASES = {
-    "LIMA METROPOLITANA": "LIMA",
-    "PROV. CONST. DEL CALLAO": "CALLAO",
-    "PROVINCIA CONSTITUCIONAL DEL CALLAO": "CALLAO",
-    "SAN MARTÍN": "SAN MARTIN",
+
+# ============================================================
+# NORMALIZACIÓN DE TEXTO
+# ============================================================
+
+def normalize_text(value) -> str | None:
+
+    if pd.isna(value):
+        return None
+
+    text = str(value).strip().upper()
+
+    text = unicodedata.normalize(
+        "NFD",
+        text,
+    )
+
+    text = "".join(
+        ch
+        for ch in text
+        if unicodedata.category(ch) != "Mn"
+    )
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text,
+    )
+
+    return text
+
+
+# ============================================================
+# NORMALIZACIÓN DE DEPARTAMENTO
+# ============================================================
+
+DEPARTMENT_ALIASES = {
+    "ANCASH": "ANCASH",
+    "ÁNCASH": "ANCASH",
+    "ANCAH": "ANCASH",
+
+    "APURIMAC": "APURIMAC",
     "APURÍMAC": "APURIMAC",
+
+    "CUSCO": "CUSCO",
+    "CUZCO": "CUSCO",
+
+    "JUNIN": "JUNIN",
     "JUNÍN": "JUNIN",
+
+    "HUANUCO": "HUANUCO",
     "HUÁNUCO": "HUANUCO",
+
+    "SAN MARTIN": "SAN MARTIN",
+    "SAN MARTÍN": "SAN MARTIN",
+
+    "LIMA METROPOLITANA": "LIMA",
+
+    "CALLAO": "CALLAO",
+    "PROVINCIA CONSTITUCIONAL DEL CALLAO": "CALLAO",
 }
 
 
-def strip_accents(s: str) -> str:
-    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+def normalize_department(
+    value,
+) -> str | None:
 
+    text = normalize_text(value)
 
-def normalize_departamento(raw: str) -> str | None:
-    """Devuelve el nombre oficial del departamento, o None si no se puede mapear."""
-    if not isinstance(raw, str) or not raw.strip():
+    if text is None:
         return None
-    clean = strip_accents(raw.strip().upper())
-    clean = re.sub(r"\s+", " ", clean)
-    if clean in DEPARTAMENTOS_PERU:
-        return clean
-    if clean in DEPARTAMENTO_ALIASES:
-        return DEPARTAMENTO_ALIASES[clean]
-    # a veces viene como "LIMA - LIMA - JESUS MARIA" (departamento-provincia-distrito)
-    first_part = clean.split(" - ")[0].strip()
-    if first_part in DEPARTAMENTOS_PERU:
-        return first_part
+
+    if text in DEPARTMENT_ALIASES:
+        return DEPARTMENT_ALIASES[text]
+
+    if text in DEPARTMENTS:
+        return text
+
     return None
 
 
-def load_raw() -> pd.DataFrame:
-    path = PROCESSED_DIR / "oece_raw_combined.csv"
-    if not path.exists():
-        print(f"No existe {path}. Corre src/load_data.py primero.")
-        sys.exit(1)
-    # oece_raw_combined.csv ya fue re-guardado en UTF-8 limpio por
-    # load_data.py (read_csv_robust), asi que aqui basta UTF-8 normal.
-    return pd.read_csv(path, low_memory=False, encoding="utf-8")
+# ============================================================
+# NORMALIZACIÓN DE PROVINCIA
+# ============================================================
+
+# Mapa mínimo para recuperar departamentos cuando OECE
+# entrega una provincia en lugar del departamento.
+#
+# Se puede ampliar posteriormente con las 196 provincias.
+
+PROVINCE_TO_DEPARTMENT = {
+
+    # Amazonas
+    "CHACHAPOYAS": "AMAZONAS",
+    "BAGUA": "AMAZONAS",
+    "BONGARA": "AMAZONAS",
+    "CONDORCANQUI": "AMAZONAS",
+    "LUYA": "AMAZONAS",
+    "RODRIGUEZ DE MENDOZA": "AMAZONAS",
+    "UTCUBAMBA": "AMAZONAS",
+
+    # Ancash
+    "HUARAZ": "ANCASH",
+    "AIJA": "ANCASH",
+    "ANTONIO RAYMONDI": "ANCASH",
+    "ASUNCION": "ANCASH",
+    "BOLOGNESI": "ANCASH",
+    "CARHUAZ": "ANCASH",
+    "CARLOS FERMIN FITZCARRALD": "ANCASH",
+    "CASMA": "ANCASH",
+    "CORONGO": "ANCASH",
+    "HUARI": "ANCASH",
+    "HUARMEY": "ANCASH",
+    "HUAYLAS": "ANCASH",
+    "MARISCAL LUZURIAGA": "ANCASH",
+    "OCROS": "ANCASH",
+    "PALLASCA": "ANCASH",
+    "POMABAMBA": "ANCASH",
+    "RECUAY": "ANCASH",
+    "SANTA": "ANCASH",
+    "SIHUAS": "ANCASH",
+    "YUNGAY": "ANCASH",
+
+    # Arequipa
+    "AREQUIPA": "AREQUIPA",
+    "CAMANA": "AREQUIPA",
+    "CARAVELI": "AREQUIPA",
+    "CASTILLA": "AREQUIPA",
+    "CAYLLOMA": "AREQUIPA",
+    "CONDESUYOS": "AREQUIPA",
+    "ISLAY": "AREQUIPA",
+    "LA UNION": "AREQUIPA",
+
+    # Cusco
+    "CUSCO": "CUSCO",
+    "ACOMAYO": "CUSCO",
+    "ANTA": "CUSCO",
+    "CALCA": "CUSCO",
+    "CANAS": "CUSCO",
+    "CANCHIS": "CUSCO",
+    "CHUMBIVILCAS": "CUSCO",
+    "ESPINAR": "CUSCO",
+    "LA CONVENCION": "CUSCO",
+    "PARURO": "CUSCO",
+    "PAUCARTAMBO": "CUSCO",
+    "QUISPICANCHI": "CUSCO",
+    "URUBAMBA": "CUSCO",
+
+    # Lima
+    "LIMA": "LIMA",
+    "BARRANCA": "LIMA",
+    "CAJATAMBO": "LIMA",
+    "CANTA": "LIMA",
+    "CAÑETE": "LIMA",
+    "CANTA": "LIMA",
+    "HUARAL": "LIMA",
+    "HUAROCHIRI": "LIMA",
+    "OYON": "LIMA",
+    "YAUYOS": "LIMA",
+
+    # Callao
+    "CALLAO": "CALLAO",
+
+    # Piura
+    "PIURA": "PIURA",
+    "AYABACA": "PIURA",
+    "HUANCABAMBA": "PIURA",
+    "MORROPON": "PIURA",
+    "PAITA": "PIURA",
+    "SECHURA": "PIURA",
+    "SULLANA": "PIURA",
+    "TALARA": "PIURA",
+
+    # Puno
+    "PUNO": "PUNO",
+    "AZANGARO": "PUNO",
+    "CARABAYA": "PUNO",
+    "CHUCUITO": "PUNO",
+    "EL COLLAO": "PUNO",
+    "HUANCANE": "PUNO",
+    "LAMPA": "PUNO",
+    "MELGAR": "PUNO",
+    "MOHO": "PUNO",
+    "SAN ANTONIO DE PUTINA": "PUNO",
+    "SAN ROMAN": "PUNO",
+    "SANDIA": "PUNO",
+    "YUNGUYO": "PUNO",
+}
 
 
-def load_department_lookup() -> pd.Series | None:
-    """Construye un lookup entity_id -> department_raw desde
-    partes_raw_combined.csv (archivo "Ent_PartesInvolucradas"). Cada
-    entidad puede aparecer muchas veces (1 vez por entrega en la que
-    participo) con el mismo departamento — se deduplica quedandose con
-    el primer valor no vacio por entity_id."""
-    path = PROCESSED_DIR / "partes_raw_combined.csv"
-    if not path.exists():
-        print("(Opcional) No se encontro partes_raw_combined.csv — el departamento quedara vacio. "
-              "Corre load_data.py con los archivos 'partes_AAAA_MM.csv' para incluirlo.")
-        return None
+def resolve_department(
+    department,
+    region,
+) -> str | None:
 
-    partes = pd.read_csv(path, low_memory=False, encoding="utf-8")
-    missing = [c for c in PARTES_COLUMN_MAP.values() if c not in partes.columns]
-    if missing:
-        print(f"\n⚠️  ADVERTENCIA: estas columnas de PARTES_COLUMN_MAP no existen en partes_raw_combined.csv: {missing}")
-        print(f"Columnas disponibles: {list(partes.columns)}")
-        print("Ajusta PARTES_COLUMN_MAP en src/validate.py.\n")
-        return None
+    # Primero intentamos el departamento declarado.
+    dept = normalize_department(
+        department
+    )
 
-    partes = partes.rename(columns={v: k for k, v in PARTES_COLUMN_MAP.items()})
-    partes = partes.dropna(subset=["entity_id", "department_raw"])
-    lookup = partes.drop_duplicates(subset=["entity_id"], keep="first").set_index("entity_id")["department_raw"]
-    print(f"Lookup de departamento construido: {len(lookup)} entidades unicas con ubicacion conocida.")
-    return lookup
+    if dept:
+        return dept
+
+    # Si OECE puso una provincia en ese campo,
+    # intentamos recuperarla mediante el mapa.
+    dept_from_province = (
+        PROVINCE_TO_DEPARTMENT.get(
+            normalize_text(department)
+        )
+        if department is not None
+        else None
+    )
+
+    if dept_from_province:
+        return dept_from_province
+
+    # Finalmente intentamos con region.
+    region_norm = normalize_text(
+        region
+    )
+
+    if region_norm in PROVINCE_TO_DEPARTMENT:
+
+        return PROVINCE_TO_DEPARTMENT[
+            region_norm
+        ]
+
+    return None
 
 
-def validate_and_normalize(df: pd.DataFrame, dept_lookup: pd.Series = None) -> tuple[pd.DataFrame, dict]:
-    report = {}
+# ============================================================
+# VALIDACIÓN
+# ============================================================
+
+def validate_and_normalize(
+    df: pd.DataFrame,
+):
+
+    report = []
+
     n_before = len(df)
-    report["filas_antes"] = n_before
 
-    missing_cols = [c for c in COLUMN_MAP.values() if c not in df.columns]
-    if missing_cols:
-        print(f"\n⚠️  ADVERTENCIA: estas columnas de COLUMN_MAP no existen en el CSV real: {missing_cols}")
-        print(f"Columnas disponibles en el archivo: {list(df.columns)}")
-        print("Ajusta COLUMN_MAP en src/validate.py con los nombres correctos y vuelve a correr.\n")
-        sys.exit(1)
+    # --------------------------------------------------------
+    # 1. OCID faltante
+    # --------------------------------------------------------
 
-    rename = {v: k for k, v in COLUMN_MAP.items()}
-    df = df.rename(columns=rename)
+    missing_ocid = (
+        df["ocid"]
+        .isna()
+        | (
+            df["ocid"]
+            .astype(str)
+            .str.strip()
+            == ""
+        )
+    )
 
-    # 1. Registros duplicados (mismo ocid exacto)
-    dup_mask = df.duplicated(subset=["ocid"], keep="first")
-    report["duplicados_ocid"] = int(dup_mask.sum())
-    df = df[~dup_mask].copy()
+    report.append({
+        "regla": "OCID faltante",
+        "flagged": int(
+            missing_ocid.sum()
+        ),
+        "accion": (
+            "descartado: no es posible identificar "
+            "el proceso sin OCID"
+            if missing_ocid.any()
+            else
+            "ninguno encontrado"
+        ),
+    })
 
-    # 2. Monto faltante o cero
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
-    zero_or_null_amount = df["amount"].isna() | (df["amount"] == 0)
-    report["monto_cero_o_nulo"] = int(zero_or_null_amount.sum())
-    df["amount_flag"] = zero_or_null_amount  # se mantiene, solo se marca (no se descarta)
+    if missing_ocid.any():
 
-    # 3. Descripcion faltante
-    missing_desc = df["description"].isna() | (df["description"].astype(str).str.strip() == "")
-    report["descripcion_faltante"] = int(missing_desc.sum())
-    df = df[~missing_desc].copy()
+        df = df[
+            ~missing_ocid
+        ].copy()
 
-    # 4. Cruce con el departamento (viene de otro archivo, ver
-    # load_department_lookup) y normalizacion territorial
-    if dept_lookup is not None:
-        df["department"] = df["buyer_id"].map(dept_lookup)
-    else:
-        df["department"] = None
-    df["department_normalizado"] = df["department"].apply(normalize_departamento)
-    no_localizados = df["department_normalizado"].isna()
-    report["procesos_no_localizados"] = int(no_localizados.sum())
-    report["procesos_no_localizados_pct"] = round(100 * no_localizados.sum() / len(df), 2) if len(df) else 0
+    # --------------------------------------------------------
+    # 2. Duplicados
+    # --------------------------------------------------------
 
-    # 5. Encoding/tildes en texto (ej. JUNÍN vs JUNIN) — ya resuelto por
-    # normalize_departamento via strip_accents; se reporta cuantos
-    # valores distintos existian ANTES de normalizar como evidencia.
-    valores_unicos_antes = df["department"].nunique()
-    valores_unicos_despues = df["department_normalizado"].nunique()
-    report["valores_unicos_department_antes"] = int(valores_unicos_antes)
-    report["valores_unicos_department_despues"] = int(valores_unicos_despues)
+    duplicate_mask = (
+        df.duplicated(
+            subset="ocid",
+            keep="first",
+        )
+    )
 
-    report["filas_despues"] = len(df)
+    n_duplicates = int(
+        duplicate_mask.sum()
+    )
+
+    report.append({
+        "regla": "OCID duplicado",
+        "flagged": n_duplicates,
+        "accion": (
+            "eliminado: se conserva "
+            "la primera aparición"
+            if n_duplicates
+            else
+            "ninguno encontrado"
+        ),
+    })
+
+    if n_duplicates:
+
+        df = df[
+            ~duplicate_mask
+        ].copy()
+
+    # --------------------------------------------------------
+    # 3. Monto
+    # --------------------------------------------------------
+
+    df["monto_pen"] = pd.to_numeric(
+        df["monto_pen"],
+        errors="coerce",
+    )
+
+    missing_amount = (
+        df["monto_pen"].isna()
+    )
+
+    zero_amount = (
+        df["monto_pen"].eq(0)
+    )
+
+    df["monto_valido"] = (
+        ~missing_amount
+        & ~zero_amount
+    )
+
+    report.append({
+        "regla": "Monto faltante",
+        "flagged": int(
+            missing_amount.sum()
+        ),
+        "accion": (
+            "mantenido con advertencia; "
+            "excluido de agregados monetarios"
+        ),
+    })
+
+    report.append({
+        "regla": "Monto igual a cero",
+        "flagged": int(
+            zero_amount.sum()
+        ),
+        "accion": (
+            "mantenido con advertencia; "
+            "excluido de agregados monetarios"
+        ),
+    })
+
+    # --------------------------------------------------------
+    # 4. Descripción
+    # --------------------------------------------------------
+
+    description_missing = (
+        df["descripcion"].isna()
+        | (
+            df["descripcion"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            == ""
+        )
+    )
+
+    df["descripcion_valida"] = (
+        ~description_missing
+    )
+
+    # Usamos título como respaldo.
+    df.loc[
+        description_missing,
+        "descripcion"
+    ] = df.loc[
+        description_missing,
+        "titulo"
+    ]
+
+    report.append({
+        "regla": "Descripción faltante",
+        "flagged": int(
+            description_missing.sum()
+        ),
+        "accion": (
+            "corregido: se utiliza el título "
+            "como respaldo; queda marcado "
+            "descripcion_valida=False"
+        ),
+    })
+
+    # --------------------------------------------------------
+    # 5. Departamento
+    # --------------------------------------------------------
+
+    df["departamento"] = df.apply(
+        lambda row: resolve_department(
+            row["departamento_raw"],
+            row["region_raw"],
+        ),
+        axis=1,
+    )
+
+    missing_department = (
+        df["departamento"].isna()
+    )
+
+    report.append({
+        "regla": "Departamento no identificable",
+        "flagged": int(
+            missing_department.sum()
+        ),
+        "accion": (
+            "mantenido con advertencia; "
+            "no se elimina del corpus, "
+            "pero queda fuera del mapa"
+        ),
+    })
+
+    # --------------------------------------------------------
+    # 6. Normalización de texto
+    # --------------------------------------------------------
+
+    df["comprador_normalizado"] = (
+        df["comprador"]
+        .apply(normalize_text)
+    )
+
+    df["categoria_normalizada"] = (
+        df["categoria"]
+        .apply(normalize_text)
+    )
+
+    unique_before = (
+        df["comprador"]
+        .fillna("")
+        .astype(str)
+        .nunique()
+    )
+
+    unique_after = (
+        df["comprador_normalizado"]
+        .fillna("")
+        .nunique()
+    )
+
+    report.append({
+        "regla": (
+            "Inconsistencias de mayúsculas/"
+            "acentos/espacios"
+        ),
+        "flagged": max(
+            0,
+            unique_before
+            - unique_after,
+        ),
+        "accion": (
+            "corregido en columnas normalizadas; "
+            "se conserva el nombre original "
+            "para mostrarlo al usuario"
+        ),
+    })
+
+    # --------------------------------------------------------
+    # Resultado
+    # --------------------------------------------------------
+
+    n_after = len(df)
+
+    report.append({
+        "regla": "TOTAL",
+        "flagged": f"{n_before} -> {n_after}",
+        "accion": (
+            "una fila por proceso identificado "
+            "por OCID"
+        ),
+    })
 
     return df, report
 
 
+# ============================================================
+# MAIN
+# ============================================================
+
 def main():
-    df = load_raw()
-    print(f"Cargadas {len(df)} filas de {PROCESSED_DIR / 'oece_raw_combined.csv'}")
-    print(f"Columnas: {list(df.columns)}\n")
 
-    dept_lookup = load_department_lookup()
-    df_clean, report = validate_and_normalize(df, dept_lookup)
+    print()
+    print("=" * 60)
+    print("TAREA 2 - FASE 2: VALIDACIÓN")
+    print("=" * 60)
 
-    report_path = LOGS_DIR / "data_quality_report.json"
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    # --------------------------------------------------------
+    # Cargar corpus
+    # --------------------------------------------------------
 
-    print("=== REPORTE DE CALIDAD DE DATOS ===")
-    for k, v in report.items():
-        print(f"  {k}: {v}")
+    df = load_all_months(
+        months=[
+            "01",
+            "02",
+            "03",
+        ],
+        year="2026",
+    )
 
-    out_path = PROCESSED_DIR / "oece_clean.csv"
-    df_clean.to_csv(out_path, index=False)
-    print(f"\nGuardado: {out_path} ({len(df_clean)} filas, 1 fila = 1 proceso)")
-    print(f"Reporte: {report_path}")
+    n_raw = len(df)
+
+    print()
+    print(
+        f"Filas crudas: {n_raw:,}"
+    )
+
+    # --------------------------------------------------------
+    # Validar
+    # --------------------------------------------------------
+
+    df, report = (
+        validate_and_normalize(df)
+    )
+
+    # --------------------------------------------------------
+    # Guardar dataset
+    # --------------------------------------------------------
+
+    output_csv = (
+        PROCESSED_DIR
+        / "procesos.csv"
+    )
+
+    df.to_csv(
+        output_csv,
+        index=False,
+        encoding="utf-8-sig",
+    )
+
+    # --------------------------------------------------------
+    # Reporte Markdown
+    # --------------------------------------------------------
+
+    lines = []
+
+    lines.append(
+        "# Reporte de calidad de datos — "
+        "Tarea 2, Fase 2"
+    )
+
+    lines.append("")
+
+    lines.append(
+        f"Filas crudas: **{n_raw:,}**"
+    )
+
+    lines.append(
+        f"Filas finales: **{len(df):,}**"
+    )
+
+    lines.append("")
+
+    lines.append(
+        "## Reglas de validación"
+    )
+
+    lines.append("")
+
+    lines.append(
+        "| Regla | Registros marcados | Acción |"
+    )
+
+    lines.append(
+        "|---|---:|---|"
+    )
+
+    for item in report:
+
+        lines.append(
+            f"| {item['regla']} | "
+            f"{item['flagged']} | "
+            f"{item['accion']} |"
+        )
+
+    # --------------------------------------------------------
+    # Distribución territorial
+    # --------------------------------------------------------
+
+    lines.append("")
+
+    lines.append(
+        "## Distribución por departamento"
+    )
+
+    lines.append("")
+
+    lines.append(
+        "| Departamento | Procesos |"
+    )
+
+    lines.append(
+        "|---|---:|"
+    )
+
+    counts = (
+        df["departamento"]
+        .value_counts(
+            dropna=False
+        )
+    )
+
+    for department, count in counts.items():
+
+        label = (
+            department
+            if pd.notna(department)
+            else "(sin ubicar)"
+        )
+
+        lines.append(
+            f"| {label} | {count:,} |"
+        )
+
+    # --------------------------------------------------------
+    # Distribución mensual
+    # --------------------------------------------------------
+
+    lines.append("")
+
+    lines.append(
+        "## Procesos por mes"
+    )
+
+    lines.append("")
+
+    lines.append(
+        "| Mes | Procesos |"
+    )
+
+    lines.append(
+        "|---|---:|"
+    )
+
+    monthly = (
+        df["mes_origen"]
+        .value_counts()
+        .sort_index()
+    )
+
+    for month, count in monthly.items():
+
+        lines.append(
+            f"| {month} | {count:,} |"
+        )
+
+    # --------------------------------------------------------
+    # Guardar reporte
+    # --------------------------------------------------------
+
+    report_path = (
+        PROCESSED_DIR
+        / "data_quality_report.md"
+    )
+
+    report_path.write_text(
+        "\n".join(lines),
+        encoding="utf-8",
+    )
+
+    # --------------------------------------------------------
+    # Consola
+    # --------------------------------------------------------
+
+    print()
+    print("=" * 60)
+    print("RESULTADO")
+    print("=" * 60)
+
+    print(
+        f"Filas antes:  {n_raw:,}"
+    )
+
+    print(
+        f"Filas después: {len(df):,}"
+    )
+
+    print()
+
+    for item in report:
+
+        print(
+            f"[{item['flagged']}] "
+            f"{item['regla']}: "
+            f"{item['accion']}"
+        )
+
+    print()
+    print(
+        f"Dataset guardado en:\n"
+        f"{output_csv}"
+    )
+
+    print()
+    print(
+        f"Reporte guardado en:\n"
+        f"{report_path}"
+    )
 
 
 if __name__ == "__main__":
