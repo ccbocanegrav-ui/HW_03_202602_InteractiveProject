@@ -27,12 +27,18 @@ from pathlib import Path
 
 import chromadb
 import yaml
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from embeddings import get_embedding_backend  # noqa: E402
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = BASE_DIR / "config.yaml"
+
+_ENV_PATH = BASE_DIR.parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH)
+if not _ENV_PATH.exists():
+    load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 
 def load_config():

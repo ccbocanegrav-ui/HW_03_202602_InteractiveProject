@@ -1,0 +1,11 @@
+[server]
+# "none" evita que Streamlit escanee todos los modulos de transformers
+# en busca de cambios de archivo (eso es lo que generaba el muro de
+# ModuleNotFoundError: torchvision — ruido inofensivo, torchvision es
+# una dependencia opcional que no usamos). Con esto desactivado, para
+# ver cambios en el codigo hay que parar y volver a correr
+# "streamlit run app.py" manualmente, en vez de auto-recargar.
+fileWatcherType = "none"
+
+[theme]
+base = "dark"

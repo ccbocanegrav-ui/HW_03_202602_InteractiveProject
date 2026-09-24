@@ -32,9 +32,17 @@ embeddings:
     passage_prefix: "passage: "
     max_input_tokens: 512
   api:
-    provider: "openai"
-    model_name: "text-embedding-3-small"
-    max_input_tokens: 8191
+    # SUSTITUCION DOCUMENTADA (Fase 4): el enunciado pide comparar
+    # contra text-embedding-3-small de OpenAI, pero esto requiere
+    # creditos de pago no disponibles. Se intento primero con
+    # text-embedding-004 de Gemini, pero su endpoint de embeddings
+    # tiene un bug confirmado del lado de Google con las API keys
+    # nuevas (401 ACCESS_TOKEN_TYPE_UNSUPPORTED, ver DECISIONES.md).
+    # Se usa Cohere (embed-multilingual-v3.0) en su lugar: nivel
+    # gratuito real, sin tarjeta, sin el problema de Gemini.
+    provider: "cohere"
+    model_name: "embed-multilingual-v3.0"
+    max_input_tokens: 512
 
 vector_store:
   provider: "chromadb"
@@ -54,8 +62,8 @@ retrieval:
                                      # contexto no lo sustenta, en vez de alucinar.
 
 generation:
-  provider: "gemini"                 # cambiar aqui, no en el codigo. "gemini" (gratis) u "openai" (de pago)
-  model_name: "gemini-3.6-flash"     # gemini-2.0-flash fue retirado por Google; actualizar aqui si vuelve a cambiar
+  provider: "cohere"                 # cambiar aqui, no en el codigo. "cohere" (gratis, estable) / "gemini" / "openai" (de pago)
+  model_name: "command-r-08-2024"    # "command-r" (alias viejo) fue retirado el 15/09/2025 por Cohere; verificado vigente en docs.cohere.com/docs/models el 2026-09-24
   max_output_tokens: 1024            # gemini-3.6-flash consume tokens internos de "thinking" antes
                                       # de la respuesta final; 500 no alcanzaba y cortaba la respuesta a la mitad
   system_prompt: |

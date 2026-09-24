@@ -1,11 +1,21 @@
 id,pregunta,tipo,documento_esperado,pagina_esperada,nota
-q1,¿Cual es el plazo maximo para pagar al contratista luego de otorgada la conformidad?,in_domain,ley_32069,29,Articulo 67 - plazo de 10 dias habiles
-q2,¿Cuanto puede exceder en conjunto el adelanto directo del monto del contrato original?,in_domain,ley_32069,29,Articulo 66 - tope del 30%
-q3,¿Que pueden hacer el oficial de compra o el comite al elaborar las bases?,in_domain,ds_001_2026_ef,3,Articulo 55 modificado por el DS 001-2026-EF
-q4,¿Cuando se declara desierto un procedimiento de subasta inversa electronica por comparacion de precios?,in_domain,ds_001_2026_ef,4,Articulo 96/98 modificado por el DS
-q5,¿En cuanto tiempo debe pagar la entidad contratante despues de la conformidad del area usuaria?,in_domain,ley_32069,29,Version coloquial de la pregunta q1 (mismo articulo 67)
-q6,¿Que porcentaje minimo debe representar el monto ofertado para el componente de diseño en obras de diseño y construccion?,in_domain,ds_001_2026_ef,,Articulo 166 modificado - buscar pagina exacta si se usa
-q7,¿Como cocino un ceviche peruano?,out_of_domain,,,Pregunta totalmente fuera de dominio (ejemplo del propio enunciado)
-q8,¿Cuales son los requisitos para ser Presidente de la Republica del Peru?,out_of_domain,,,Fuera de dominio pero tematicamente cercano (derecho publico)
-q9,¿Cual es el procedimiento detallado para resolver un contrato por incumplimiento segun el Reglamento?,out_of_domain,,,Dentro del tema pero el detalle completo esta en el Reglamento (no indexado) no en la Ley ni el DS
-q10,¿Que dice el Reglamento sobre el plazo de garantia de los bienes adquiridos?,out_of_domain,,,El Reglamento base (DS 009-2025-EF) no esta indexado; solo esta la Ley y el DS que lo MODIFICA parcialmente
+q1,¿Cual es el plazo maximo para pagar al contratista luego de otorgada la conformidad?,in_domain,ley_32069,29,Articulo 67.3 - verificado
+q2,¿En cuanto tiempo me tienen que pagar despues de que el area usuaria de la conformidad?,in_domain,ley_32069,29,Version coloquial de q1 - mismo articulo 67.3
+q3,¿Cuales son los supuestos para resolver un contrato segun la Ley?,in_domain,ley_32069,29,Articulo 68 - verificado
+q4,¿Cuanto puede exceder en conjunto el adelanto directo del monto del contrato original?,in_domain,ley_32069,29,Articulo 66.3 - tope 30%
+q5,¿Que pasa si contrato con el Estado y no puedo cumplir por una emergencia?,in_domain,ley_32069,20,Version coloquial - Articulo 40 (contrataciones por emergencia)
+q6,¿Que son los catalogos electronicos de acuerdos marco?,in_domain,ley_32069,22,Articulo 43 de la Ley - verificado
+q7,¿Cuando se aplica la inhabilitacion definitiva a un proveedor?,in_domain,ley_32069,39,Articulo 91 de la Ley - verificado
+q8,¿Que pueden hacer el oficial de compra o el comite al elaborar las bases de un proceso de seleccion?,in_domain,ds_001_2026_ef,3,Articulo 55 del Reglamento modificado por el DS
+q9,Estoy armando las bases de mi proceso ¿que ajustes le puedo hacer?,in_domain,ds_001_2026_ef,3,Version coloquial de q8
+q10,¿Que requisitos necesito para incorporarme al registro de compradores publicos?,in_domain,ds_001_2026_ef,2,Articulo 15 del Reglamento modificado por el DS
+q11,¿Cuando puede la entidad contratante inaplicar temporalmente un impedimento por riesgo de desabastecimiento?,in_domain,ds_001_2026_ef,,Articulo 40 del REGLAMENTO (distinto al articulo 40 de la Ley) modificado por el DS - buscar pagina exacta si se usa
+q12,¿Que pasa si el postor ganador no perfecciona el contrato por su culpa?,in_domain,ds_001_2026_ef,,Articulo 91 del REGLAMENTO (distinto al articulo 91 de la Ley) modificado por el DS
+q13,¿Cuando se declara desierto un procedimiento por comparacion de precios?,in_domain,ds_001_2026_ef,4,Articulo 98 del Reglamento modificado por el DS
+q14,¿Cual es el requisito minimo de estudios para certificarme como comprador publico?,in_domain,ds_001_2026_ef,2,Articulo 16 del Reglamento - bachiller universitario o titulo tecnico
+q15,¿Que documentos debo presentar para perfeccionar un contrato despues de ganar la buena pro?,in_domain,ds_001_2026_ef,4,Articulo 88 del Reglamento modificado por el DS
+q16,¿Como cocino un ceviche peruano?,out_of_domain,,,Totalmente fuera de dominio (ejemplo del propio enunciado)
+q17,¿Cuales son los requisitos para ser Presidente de la Republica del Peru?,out_of_domain,,,Fuera de dominio pero tematicamente cercano (derecho publico)
+q18,¿Cual es el procedimiento detallado paso a paso para liquidar una obra segun el Reglamento?,out_of_domain,,,El detalle procedimental completo esta en articulos del Reglamento que el DS NO modifica y por tanto no estan indexados
+q19,¿Que dice el Reglamento sobre el plazo de garantia de los bienes adquiridos por el Estado?,out_of_domain,,,Tema del Reglamento base (no indexado); el DS no lo modifica
+q20,¿Cuanto cuesta contratar un abogado especialista en contrataciones publicas en Lima?,out_of_domain,,,Cercano al dominio (contrataciones publicas) pero es una pregunta de mercado/precios no normativa

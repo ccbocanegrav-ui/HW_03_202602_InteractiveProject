@@ -1,8 +1,10 @@
-pdvfplumber>=0.11.0
+pdfplumber>=0.11.0
 pyyaml>=6.0
 sentence-transformers>=3.0.0
 chromadb>=0.5.0
 openai>=1.0.0
 google-generativeai>=0.8.0
+google-genai>=1.0.0
+cohere>=5.0.0
 python-dotenv>=1.0.0
-# pendiente Fase 5: streamlit
+streamlit>=1.30.0

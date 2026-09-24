@@ -86,6 +86,44 @@ class GeminiGenerator(GenerationBackend):
         }
 
 
+class CohereGenerator(GenerationBackend):
+    """command-r (Cohere). TERCER proveedor de generacion probado: se
+    intento primero OpenAI (requiere creditos de pago, no disponibles),
+    luego Gemini (funciono un tiempo pero el mismo bug de Google del
+    endpoint de embeddings — 401 ACCESS_TOKEN_TYPE_UNSUPPORTED con
+    keys nuevas "AQ." — empezo a afectar tambien a generateContent).
+    Cohere ya se uso exitosamente para embeddings (Fase 4) y no tiene
+    este problema, asi que se unifica todo en un solo proveedor
+    confiable. Ver DECISIONES.md."""
+
+    def __init__(self, model_name: str):
+        import os
+        import cohere
+
+        api_key = os.environ.get("COHERE_API_KEY")
+        if not api_key:
+            raise RuntimeError("COHERE_API_KEY no encontrada en el entorno (revisa tu .env).")
+        self.model_name = model_name
+        self._client = cohere.ClientV2(api_key=api_key)
+
+    def generate(self, system_prompt: str, user_prompt: str, max_tokens: int) -> dict:
+        response = self._client.chat(
+            model=self.model_name,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        text = response.message.content[0].text
+        usage = response.usage.billed_units
+        return {
+            "text": text,
+            "tokens_in": int(usage.input_tokens or 0),
+            "tokens_out": int(usage.output_tokens or 0),
+        }
+
+
 def get_generation_backend(config: dict) -> GenerationBackend:
     provider = config["generation"]["provider"]
     model_name = config["generation"]["model_name"]
@@ -93,5 +131,7 @@ def get_generation_backend(config: dict) -> GenerationBackend:
         return OpenAIGenerator(model_name)
     elif provider == "gemini":
         return GeminiGenerator(model_name)
+    elif provider == "cohere":
+        return CohereGenerator(model_name)
     else:
         raise ValueError(f"Proveedor de generacion desconocido: {provider}")

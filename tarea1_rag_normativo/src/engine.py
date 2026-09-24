@@ -46,9 +46,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from embeddings import get_embedding_backend  # noqa: E402
 from generation import get_generation_backend  # noqa: E402
 
-load_dotenv()  # carga OPENAI_API_KEY / GEMINI_API_KEY desde .env, nunca hardcodeada
+BASE_DIR = Path(__file__).resolve().parent.parent  # .../tarea1_rag_normativo
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Ruta explicita al .env (en la raiz del repo, un nivel arriba de
+# tarea1_rag_normativo). No se deja que python-dotenv "adivine" la
+# ruta buscando hacia arriba desde el directorio de trabajo actual,
+# porque ese comportamiento depende de desde donde se ejecute el
+# comando (terminal vs. streamlit) y causaba que a veces no lo
+# encontrara.
+_ENV_PATH = BASE_DIR.parent / ".env"
+load_dotenv(dotenv_path=_ENV_PATH)
+if not _ENV_PATH.exists():
+    # fallback: tambien se acepta un .env dentro de tarea1_rag_normativo/
+    load_dotenv(dotenv_path=BASE_DIR / ".env")
+
 CONFIG_PATH = BASE_DIR / "config.yaml"
 
 # Precios por 1M tokens, verificados el 2026-09-22 en la pagina oficial
@@ -64,6 +75,9 @@ PRICING_USD_PER_1M_TOKENS = {
     "gemini-1.5-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
     "gemini-2.0-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
     "gemini-3.6-flash": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-22"},
+    # Cohere Trial API: gratis dentro del limite de la cuenta trial
+    # (no de produccion), suficiente para este proyecto.
+    "command-r-08-2024": {"input": 0.0, "output": 0.0, "verified_on": "2026-09-24"},
 }
 
 _backend_cache = {}  # evita recargar el modelo de embeddings en cada llamada
