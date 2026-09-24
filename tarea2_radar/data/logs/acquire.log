@@ -22,3 +22,15 @@
 2026-09-24 00:15:52,244 | INFO | ZIP OK | 2026-02_seace_v3_csv_es.zip | mes=02 | size=8.36 MB
 2026-09-24 00:15:52,245 | INFO | ZIP OK | 2026-03_seace_v3_csv_es.zip | mes=03 | size=14.86 MB
 2026-09-24 00:15:52,247 | INFO | RESUMEN | encontrados=3 | validos=3 | invalidos=0 | meses=3 | faltantes= | elapsed=0.006
+2026-09-24 02:27:39,578 | INFO | ========== INICIO ==========
+2026-09-24 02:27:39,581 | INFO | RAW_DIR=C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\raw
+2026-09-24 02:27:39,597 | INFO | ZIP OK | 2026-01_seace_v3_csv_es.zip | mes=01 | size=1.81 MB
+2026-09-24 02:27:39,609 | INFO | ZIP OK | 2026-02_seace_v3_csv_es.zip | mes=02 | size=8.36 MB
+2026-09-24 02:27:39,620 | INFO | ZIP OK | 2026-03_seace_v3_csv_es.zip | mes=03 | size=14.86 MB
+2026-09-24 02:27:39,621 | INFO | RESUMEN | encontrados=3 | validos=3 | invalidos=0 | meses=3 | faltantes= | elapsed=0.043
+2026-09-24 02:32:15,912 | INFO | ========== INICIO ==========
+2026-09-24 02:32:15,912 | INFO | RAW_DIR=C:\Users\ASUS\Documents\GitHub\HW_03_202602_InteractiveProject\tarea2_radar\data\data\raw
+2026-09-24 02:32:15,913 | INFO | ZIP OK | 2026-01_seace_v3_csv_es.zip | mes=01 | size=1.81 MB
+2026-09-24 02:32:15,913 | INFO | ZIP OK | 2026-02_seace_v3_csv_es.zip | mes=02 | size=8.36 MB
+2026-09-24 02:32:15,914 | INFO | ZIP OK | 2026-03_seace_v3_csv_es.zip | mes=03 | size=14.86 MB
+2026-09-24 02:32:15,914 | INFO | RESUMEN | encontrados=3 | validos=3 | invalidos=0 | meses=3 | faltantes= | elapsed=0.002
